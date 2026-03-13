@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FSE-Cast // Control</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap');
+:root{
+  --bg:#0a0c0f;--surface:#111418;--surface2:#181c22;--surface3:#1e2328;
+  --border:#232830;--border2:#2d333c;
+  --accent:#00e5a0;--accent2:#0066ff;--warn:#ff6b35;--danger:#ff3b3b;
+  --text:#e8eaf0;--muted:#5a6070;
+  --mono:'Space Mono',monospace;--display:'Barlow Condensed',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;min-height:100vh;overflow-x:hidden;}
+
+.topbar{display:flex;align-items:center;gap:16px;padding:0 20px;height:50px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.logo{font-family:var(--display);font-weight:900;font-size:20px;letter-spacing:4px;color:var(--accent);text-transform:uppercase;white-space:nowrap;}
+.logo span{color:var(--muted);font-weight:300;}
+.nav-tabs{display:flex;gap:2px;margin-left:8px;}
+.nav-tab{padding:5px 13px;font-family:var(--display);font-weight:600;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border:1px solid transparent;border-radius:3px;color:var(--muted);background:none;transition:all .15s;white-space:nowrap;}
+.nav-tab:hover{color:var(--text);border-color:var(--border);}
+.nav-tab.active{color:var(--accent);border-color:var(--accent);background:rgba(0,229,160,.07);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.server-badge{padding:2px 10px;border-radius:2px;font-family:var(--display);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;}
+.server-badge.on{background:rgba(0,229,160,.15);color:var(--accent);border:1px solid var(--accent);}
+.server-badge.off{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+.clock{font-family:var(--mono);color:var(--accent);font-size:13px;}
+
+.emergency-banner{display:none;background:var(--danger);color:#fff;text-align:center;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:2px;text-transform:uppercase;position:sticky;top:50px;z-index:99;animation:epulse 1s infinite;}
+.emergency-banner.active{display:block;}
+@keyframes epulse{0%,100%{background:var(--danger)}50%{background:#cc0000}}
+
+.panel{display:none;padding:20px;}
+.panel.active{display:block;}
+.panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.panel-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+@media(max-width:960px){.panel-grid,.panel-grid-3{grid-template-columns:1fr;}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:12px;}
+.card-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-family:var(--display);font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.card-header .accent{color:var(--accent);}
+.card-header .ml{margin-left:auto;}
+.card-body{padding:14px;}
+.section-title{font-family:var(--display);font-weight:900;font-size:18px;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;}
+
+/* SCREEN CARDS */
+.screens-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+.screen-card{background:var(--surface);border:2px solid var(--border);border-radius:6px;overflow:hidden;transition:border-color .2s;}
+.screen-card.live{border-color:var(--accent);}
+.screen-card.dead{border-color:var(--danger);}
+.screen-card.warn{border-color:var(--warn);}
+.sc-header{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.sc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.sc-dot.live{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+.sc-dot.dead{background:var(--danger);}
+.sc-dot.warn{background:var(--warn);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sc-name{font-family:var(--display);font-weight:900;font-size:16px;letter-spacing:1px;flex:1;}
+.sc-mode{font-family:var(--display);font-weight:700;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:2px;}
+.sc-mode.mosaic{background:rgba(0,102,255,.15);color:var(--accent2);border:1px solid var(--accent2);}
+.sc-mode.contain{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid var(--accent);}
+.sc-body{padding:12px 14px;}
+.sc-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.sc-lbl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);min-width:80px;flex-shrink:0;}
+.sc-val{font-family:var(--display);font-size:13px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sc-res{font-family:var(--mono);font-size:11px;color:var(--accent2);background:rgba(0,102,255,.1);border:1px solid rgba(0,102,255,.3);padding:1px 7px;border-radius:2px;}
+.sc-uptime{font-size:11px;color:var(--muted);}
+.sc-controls{display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--border);flex-wrap:wrap;}
+.sc-progress{height:2px;background:var(--border);margin:0 14px 10px;}
+.sc-progress-fill{height:100%;background:var(--accent);transition:width .5s linear;border-radius:1px;}
+.sc-playing{font-size:10px;color:var(--muted);padding:0 14px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* BUTTONS */
+.btn{font-family:var(--display);font-weight:700;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:7px 16px;border-radius:3px;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--accent);color:#000;border-color:var(--accent);}
+.btn-primary:hover{background:#00ffb3;}
+.btn-secondary{background:transparent;color:var(--text);border-color:var(--border);}
+.btn-secondary:hover{border-color:var(--text);}
+.btn-danger{background:transparent;color:var(--warn);border-color:var(--warn);}
+.btn-danger:hover{background:var(--warn);color:#000;}
+.btn-emergency{background:var(--danger);color:#fff;border-color:var(--danger);animation:epulse 1s infinite;}
+.btn-sm{padding:4px 10px;font-size:10px;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+
+/* FORMS */
+.form-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+.form-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;padding:6px 10px;border-radius:3px;outline:none;transition:border-color .15s;width:100%;}
+.form-input:focus{border-color:var(--accent);}
+.form-input[type=number]{width:90px;}
+.form-input[type=date]{width:140px;}
+.form-input[type=time]{width:110px;}
+select.form-input{cursor:pointer;}
+
+/* LISTS */
+.item-list{list-style:none;}
+.item-list-scroll{list-style:none;max-height:300px;overflow-y:auto;}
+.item-list-scroll::-webkit-scrollbar{width:3px;}
+.item-list-scroll::-webkit-scrollbar-thumb{background:var(--border2);}
+.list-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);transition:background .1s;cursor:pointer;}
+.list-item:hover{background:var(--surface2);}
+.list-item:last-child{border-bottom:none;}
+.list-item.active-item{background:rgba(0,229,160,.08);border-left:3px solid var(--accent);}
+.list-item.selected{background:rgba(0,102,255,.1);border-left:3px solid var(--accent2);}
+.item-num{color:var(--muted);font-size:11px;min-width:20px;text-align:right;flex-shrink:0;}
+.item-name{flex:1;font-family:var(--display);font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.item-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+.item-meta{font-size:11px;color:var(--muted);flex-shrink:0;}
+
+/* BADGES */
+.badge{padding:2px 8px;border-radius:2px;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-family:var(--display);font-weight:700;flex-shrink:0;}
+.badge-loop{background:rgba(0,229,160,.15);color:var(--accent);}
+.badge-once{background:rgba(255,107,53,.15);color:var(--warn);}
+.badge-shuffle{background:rgba(0,102,255,.15);color:var(--accent2);}
+
+/* DAYS PICKER */
+.days-picker{display:flex;gap:5px;flex-wrap:wrap;}
+.day-check{display:none;}
+.day-lbl{padding:4px 9px;border-radius:3px;border:1px solid var(--border);cursor:pointer;font-family:var(--display);font-weight:700;font-size:11px;color:var(--muted);transition:all .15s;user-select:none;}
+.day-check:checked+.day-lbl{background:rgba(0,229,160,.2);border-color:var(--accent);color:var(--accent);}
+
+/* SCHEDULE */
+.sched-item{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);}
+.sched-time{font-family:var(--display);font-weight:700;font-size:16px;color:var(--accent);min-width:70px;flex-shrink:0;}
+.sched-meta{flex:1;min-width:0;}
+.sched-name{font-family:var(--display);font-size:14px;font-weight:600;}
+.sched-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+.sched-days{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap;}
+.day-pill{width:22px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:2px;font-size:9px;font-family:var(--display);font-weight:700;border:1px solid var(--border);color:var(--muted);}
+.day-pill.on{background:rgba(0,229,160,.2);border-color:var(--accent);color:var(--accent);}
+.date-range-tag{display:inline-block;padding:1px 6px;border-radius:2px;font-size:9px;font-family:var(--display);font-weight:700;background:rgba(0,102,255,.15);color:var(--accent2);border:1px solid var(--accent2);margin-left:6px;}
+
+/* STATS */
+.stats-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.stat-box{flex:1;min-width:100px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:12px 16px;}
+.stat-val{font-family:var(--display);font-weight:900;font-size:28px;color:var(--accent);line-height:1;}
+.stat-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+
+/* DROP ZONE */
+.drop-zone{border:2px dashed var(--border);border-radius:4px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(0,229,160,.04);}
+.drop-zone input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}
+.drop-icon{font-size:24px;margin-bottom:4px;}
+.drop-msg{font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:1px;color:var(--muted);}
+.drop-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+.modal-title{font-family:var(--display);font-weight:900;font-size:20px;letter-spacing:2px;text-transform:uppercase;margin-bottom:18px;color:var(--accent);}
+.modal-footer{display:flex;gap:10px;margin-top:18px;justify-content:flex-end;}
+
+/* THUMB GRID */
+.media-thumb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;padding:12px;}
+.thumb-item{background:var(--surface2);border:1px solid var(--border);border-radius:3px;overflow:hidden;cursor:pointer;transition:all .15s;}
+.thumb-item:hover{border-color:var(--accent2);}
+.thumb-item.selected{border-color:var(--accent);outline:2px solid var(--accent);}
+.thumb-preview{width:100%;aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;}
+.thumb-preview img{width:100%;height:100%;object-fit:cover;}
+.thumb-label{padding:4px 6px;font-size:9px;font-family:var(--display);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.thumb-dur{position:absolute;bottom:22px;right:4px;background:rgba(0,0,0,.8);color:#fff;font-size:9px;padding:1px 4px;border-radius:2px;}
+
+/* TIMELINE */
+.timeline-wrap{overflow-x:auto;padding:8px 0;}
+.timeline{position:relative;height:32px;min-width:600px;background:var(--surface2);border-radius:3px;margin:0 14px;}
+.timeline-block{position:absolute;top:2px;height:28px;border-radius:2px;display:flex;align-items:center;padding:0 6px;font-size:10px;font-family:var(--display);font-weight:700;overflow:hidden;white-space:nowrap;cursor:pointer;}
+.timeline-hour{position:absolute;top:0;height:100%;border-left:1px solid var(--border);font-size:9px;color:var(--muted);padding-left:2px;display:flex;align-items:flex-end;padding-bottom:2px;}
+
+/* LOG */
+.log-table{width:100%;border-collapse:collapse;}
+.log-table th{text-align:left;padding:7px 10px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
+.log-table td{padding:7px 10px;border-bottom:1px solid rgba(35,40,48,.5);font-size:11px;vertical-align:top;}
+.log-table tr:hover td{background:var(--surface2);}
+.log-result{padding:2px 7px;border-radius:2px;font-size:9px;letter-spacing:1px;font-family:var(--display);font-weight:700;text-transform:uppercase;}
+.result-ok{background:rgba(0,229,160,.15);color:var(--accent);}
+.result-err{background:rgba(255,59,59,.15);color:var(--danger);}
+.log-scroll{max-height:440px;overflow-y:auto;}
+.log-scroll::-webkit-scrollbar{width:3px;}
+.log-scroll::-webkit-scrollbar-thumb{background:var(--border2);}
+
+.empty-state{padding:24px;text-align:center;color:var(--muted);font-family:var(--display);font-size:14px;letter-spacing:1px;}
+.tag{display:inline-block;padding:1px 7px;border-radius:2px;font-size:10px;letter-spacing:1px;text-transform:uppercase;font-family:var(--display);font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--muted);}
+.info-bar{padding:8px 10px;background:var(--surface2);border-radius:3px;border:1px solid var(--border);font-size:11px;color:var(--muted);margin-top:8px;}
+hr.divider{border:none;border-top:1px solid var(--border);margin:12px 0;}
+</style>
+</head>
+<body>
+
+<!-- EMERGENCY BANNER -->
+<div class="emergency-banner" id="emergencyBanner">⚠ EMERGENCY OVERRIDE ACTIVE — <span id="emergencyLabel"></span></div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">FSE-CAST <span>// CONTROL</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('screens')">⊞ Screens</button>
+    <button class="nav-tab" onclick="switchTab('media')">📁 Player Files</button>
+    <button class="nav-tab" onclick="switchTab('playlists')">☰ Playlists</button>
+    <button class="nav-tab" onclick="switchTab('schedule')">⏱ Schedule</button>
+    <button class="nav-tab" onclick="switchTab('log')">📋 Proof of Play</button>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-emergency btn-sm" onclick="openEmergencyModal()">⚠ OVERRIDE</button>
+    <span class="server-badge off" id="serverBadge">SERVER OFF</span>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<!-- ═══════════ SCREENS ═══════════ -->
+<div class="panel active" id="panel-screens">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <div class="section-title" style="margin:0;">Screens</div>
+    <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;">
+      <label class="form-label" style="white-space:nowrap;">Control Port</label>
+      <input type="number" class="form-input" id="serverPort" value="9900" style="width:90px;">
+    </div>
+    <button class="btn btn-primary btn-sm" id="btnStartServer" onclick="startServer()">▶ Start Server</button>
+    <button class="btn btn-danger btn-sm" id="btnStopServer" onclick="stopServer()" style="display:none;">■ Stop Server</button>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <button class="btn btn-secondary btn-sm" onclick="broadcastCmd({type:'play'})">▶ All Play</button>
+      <button class="btn btn-secondary btn-sm" onclick="broadcastCmd({type:'pause'})">⏸ All Pause</button>
+      <button class="btn btn-secondary btn-sm" onclick="openPushModal()">⇥ Push Playlist</button>
+    </div>
+  </div>
+  <div class="info-bar" id="serverInfo" style="margin-bottom:16px;">Server not started — click Start Server to allow players to connect.</div>
+  <div class="screens-grid" id="screensGrid">
+    <div class="empty-state" style="grid-column:1/-1;">No screens connected. Start the server and launch FSE-Cast Player on each display machine.</div>
+  </div>
+</div>
+
+<!-- ═══════════ MEDIA / PLAYER FILES ═══════════ -->
+<div class="panel" id="panel-media">
+
+  <!-- Header row -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <div class="section-title" style="margin:0;">Player Files</div>
+    <div class="form-group" style="flex-direction:row;align-items:center;gap:8px;margin:0;">
+      <label class="form-label" style="white-space:nowrap;">Screen</label>
+      <select class="form-input" id="playerFileSelect" style="min-width:180px;" onchange="renderPlayerFiles(this.value)">
+        <option value="">— select a screen —</option>
+      </select>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="refreshPlayerFiles()" title="Re-scan media folder on selected screen">↺ Refresh</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+      <span id="playerFilesCount" style="font-size:11px;color:var(--muted);"></span>
+      <label class="form-label" style="margin:0;white-space:nowrap;">Image hold (sec)</label>
+      <input type="number" class="form-input" id="defaultImgDur" value="10" min="1" style="width:64px;">
+    </div>
+  </div>
+
+  <!-- Info bar -->
+  <div class="info-bar" id="playerFilesInfo" style="margin-bottom:14px;">
+    Select a connected screen to browse its <strong>C:\FSE-Cast\Media</strong> folder. Copy files via Windows Explorer, then hit Refresh.
+  </div>
+
+  <div class="panel-grid">
+    <!-- Left: file grid -->
+    <div>
+      <div class="card">
+        <div class="card-header"><span class="accent">▤</span> FILES ON SCREEN</div>
+        <div id="playerFileGrid" class="media-thumb-grid" style="min-height:120px;">
+          <div class="empty-state" style="grid-column:1/-1;">No screen selected</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: selected file detail + add to playlist -->
+    <div>
+      <div class="section-title">Selected File</div>
+      <div class="card" id="playerFileDetail"><div class="card-body empty-state">Select a file</div></div>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="card-header"><span class="accent">+</span> ADD TO PLAYLIST</div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group" style="flex:1;"><label class="form-label">Playlist</label>
+              <select class="form-input" id="addToPlaylistSelect"><option value="">— choose —</option></select>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px;">
+            <button class="btn btn-primary btn-sm" onclick="addSelectedToPlaylist()">Add Selected</button>
+            <button class="btn btn-secondary btn-sm" onclick="addAllToPlaylist()">Add All Files</button>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:8px;">
+            Files are referenced by name — they resolve on each Player at playback time. All screens must have the same filenames in their Media folder.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ═══════════ PLAYLISTS ═══════════ -->
+<div class="panel" id="panel-playlists">
+  <div class="panel-grid">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="section-title" style="margin:0;">Playlists</div>
+        <button class="btn btn-primary btn-sm" onclick="openNewPlaylistModal()">+ New</button>
+        <button class="btn btn-secondary btn-sm" onclick="duplicatePlaylist()">⎘ Duplicate</button>
+      </div>
+      <div class="card"><ul class="item-list" id="playlistLibrary"><li class="empty-state">No playlists yet</li></ul></div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="section-title" style="margin:0;">Edit Playlist</div>
+        <span class="tag" id="editingPlaylistName">none</span>
+      </div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-header"><span class="accent">≡</span> ITEMS <span class="ml" id="editItemCount" style="color:var(--muted);font-size:11px;"></span></div>
+        <ul class="item-list-scroll" id="editQueueList"><li class="empty-state">Select a playlist</li></ul>
+        <div style="padding:8px 12px;border-top:1px solid var(--border);display:flex;gap:6px;">
+          <button class="btn btn-secondary btn-sm" onclick="moveItemUp()">↑ Up</button>
+          <button class="btn btn-secondary btn-sm" onclick="moveItemDown()">↓ Down</button>
+          <button class="btn btn-danger btn-sm" onclick="removeSelectedItem()">✕ Remove</button>
+          <button class="btn btn-secondary btn-sm" onclick="openAddFromLibrary()">+ From Library</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="accent">⚙</span> SETTINGS</div>
+        <div class="card-body">
+          <div class="form-row"><div class="form-group" style="flex:1;"><label class="form-label">Name</label>
+            <input type="text" class="form-input" id="plEditName" oninput="updatePlaylistSettings()">
+          </div></div>
+          <div class="form-row"><div class="form-group" style="flex:1;"><label class="form-label">Mode</label>
+            <select class="form-input" id="plEditMode" onchange="updatePlaylistSettings()">
+              <option value="loop">Loop</option>
+              <option value="once">Play Once</option>
+              <option value="shuffle">Shuffle Loop</option>
+            </select>
+          </div></div>
+          <div class="form-row"><div class="form-group" style="flex:1;"><label class="form-label">Notes</label>
+            <input type="text" class="form-input" id="plEditNotes" oninput="updatePlaylistSettings()">
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SCHEDULE ═══════════ -->
+<div class="panel" id="panel-schedule">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+    <div class="section-title" style="margin:0;">Schedule</div>
+    <button class="btn btn-primary btn-sm" onclick="openNewSchedModal()">+ Add Slot</button>
+    <button class="btn btn-secondary btn-sm" onclick="pushScheduleToAll()">⇥ Push to All Screens</button>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="accent">◫</span> TODAY'S TIMELINE</div>
+    <div class="timeline-wrap"><div class="timeline" id="timeline"></div></div>
+  </div>
+  <div class="panel-grid">
+    <div>
+      <div class="card">
+        <div class="card-header"><span class="accent">≡</span> SCHEDULE SLOTS</div>
+        <ul class="item-list" id="schedList"><li class="empty-state">No slots</li></ul>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-header"><span class="accent">⏱</span> UPCOMING — NEXT 24H</div>
+        <ul class="item-list-scroll" id="upcomingList"><li class="empty-state">None</li></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ PROOF OF PLAY ═══════════ -->
+<div class="panel" id="panel-log">
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-val" id="statTotal">0</div><div class="stat-lbl">Total Events</div></div>
+    <div class="stat-box"><div class="stat-val" id="statToday">0</div><div class="stat-lbl">Today</div></div>
+    <div class="stat-box"><div class="stat-val" id="statErrors">0</div><div class="stat-lbl">Errors</div></div>
+    <div class="stat-box"><div class="stat-val" id="statScreens">0</div><div class="stat-lbl">Active Screens</div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+    <div class="section-title" style="margin:0;">Proof of Play Log</div>
+    <div class="form-group" style="flex-direction:row;align-items:center;gap:6px;">
+      <label class="form-label">Date:</label>
+      <input type="date" class="form-input" id="logFilterDate" onchange="renderLog()">
+    </div>
+    <div class="form-group" style="flex-direction:row;align-items:center;gap:6px;">
+      <label class="form-label">Screen:</label>
+      <select class="form-input" id="logFilterScreen" onchange="renderLog()" style="width:160px;">
+        <option value="">All Screens</option>
+      </select>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="clearFilters()">Show All</button>
+    <button class="btn btn-secondary btn-sm" onclick="exportLog()">↓ Export CSV</button>
+    <button class="btn btn-danger btn-sm" onclick="clearLog()">✕ Clear</button>
+    <div style="margin-left:auto;font-size:11px;color:var(--muted);">
+      <span style="color:var(--accent2);cursor:pointer;" onclick="openDataFolder()">Open logs folder</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="log-scroll">
+      <table class="log-table">
+        <thead><tr><th>#</th><th>Screen</th><th>Timestamp</th><th>File</th><th>Playlist</th><th>Duration</th><th>Result</th></tr></thead>
+        <tbody id="logBody"><tr><td colspan="7" class="empty-state">No events yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODALS ═══════════ -->
+<!-- Push Playlist -->
+<div class="modal-overlay" id="modalPush">
+  <div class="modal">
+    <div class="modal-title">Push Playlist to Screens</div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Playlist</label>
+      <select class="form-input" id="pushPlaylistSelect"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Target</label>
+      <select class="form-input" id="pushTargetSelect">
+        <option value="all">All Connected Screens</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalPush')">Cancel</button>
+      <button class="btn btn-primary" onclick="pushPlaylist()">⇥ Push</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Playlist -->
+<div class="modal-overlay" id="modalNewPlaylist">
+  <div class="modal">
+    <div class="modal-title">New Playlist</div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Name</label>
+      <input type="text" class="form-input" id="newPlName" placeholder="e.g. Morning Loop">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Mode</label>
+      <select class="form-input" id="newPlMode">
+        <option value="loop">Loop</option><option value="once">Play Once</option><option value="shuffle">Shuffle Loop</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Notes</label>
+      <input type="text" class="form-input" id="newPlNotes">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalNewPlaylist')">Cancel</button>
+      <button class="btn btn-primary" onclick="createPlaylist()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Schedule -->
+<div class="modal-overlay" id="modalNewSched">
+  <div class="modal">
+    <div class="modal-title">New Schedule Slot</div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Name</label>
+      <input type="text" class="form-input" id="newSchedName">
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Start</label><input type="time" class="form-input" id="newSchedStart" value="08:00"></div>
+      <div class="form-group"><label class="form-label">End</label><input type="time" class="form-input" id="newSchedEnd" value="12:00"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Playlist</label>
+      <select class="form-input" id="newSchedPlaylist"></select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label">Active Days</label>
+      <div class="days-picker">
+        <input type="checkbox" class="day-check" id="dMon" checked><label class="day-lbl" for="dMon">MON</label>
+        <input type="checkbox" class="day-check" id="dTue" checked><label class="day-lbl" for="dTue">TUE</label>
+        <input type="checkbox" class="day-check" id="dWed" checked><label class="day-lbl" for="dWed">WED</label>
+        <input type="checkbox" class="day-check" id="dThu" checked><label class="day-lbl" for="dThu">THU</label>
+        <input type="checkbox" class="day-check" id="dFri" checked><label class="day-lbl" for="dFri">FRI</label>
+        <input type="checkbox" class="day-check" id="dSat"><label class="day-lbl" for="dSat">SAT</label>
+        <input type="checkbox" class="day-check" id="dSun"><label class="day-lbl" for="dSun">SUN</label>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Start Date (optional)</label><input type="date" class="form-input" id="newSchedDateStart"></div>
+      <div class="form-group"><label class="form-label">End Date (optional)</label><input type="date" class="form-input" id="newSchedDateEnd"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Priority</label>
+      <select class="form-input" id="newSchedPriority">
+        <option value="0">0 — Normal</option>
+        <option value="1">1 — High</option>
+        <option value="2">2 — Urgent</option>
+        <option value="99">99 — Emergency</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalNewSched')">Cancel</button>
+      <button class="btn btn-primary" onclick="createSchedule()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Emergency -->
+<div class="modal-overlay" id="modalEmergency">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--danger);">⚠ Emergency Override</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">Immediately interrupts all screens and broadcasts the override playlist.</div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Label</label>
+      <input type="text" class="form-input" id="emergencyLabelInput" value="EMERGENCY OVERRIDE">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;"><label class="form-label">Playlist</label>
+      <select class="form-input" id="emergencyPlaylistSelect"></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalEmergency')">Cancel</button>
+      <button class="btn btn-danger" id="btnEmergencyActivate" onclick="activateEmergency()">⚠ ACTIVATE</button>
+      <button class="btn btn-secondary" id="btnEmergencyCancel" onclick="cancelEmergency()" style="display:none;">Cancel Override</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add from Library -->
+<div class="modal-overlay" id="modalAddFromLib">
+  <div class="modal" style="width:580px;">
+    <div class="modal-title">Add from Library</div>
+    <div id="libModalGrid" class="media-thumb-grid" style="max-height:360px;overflow-y:auto;background:var(--surface2);border-radius:4px;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalAddFromLib')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmAddFromLibrary()">Add Selected</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let playlists      = [];
+let schedules      = [];
+let playLog        = [];
+let players        = {};   // id -> player info
+let serverRunning  = false;
+let emergencyActive = false;
+let editingPlaylistId = null;
+let selectedEditIdx   = -1;
+
+const TABS = ['screens','media','playlists','schedule','log'];
+
+// ══════════════════════════════════════════════════════
+//  CLOCK
+// ══════════════════════════════════════════════════════
+setInterval(()=>{ document.getElementById('clock').textContent=new Date().toTimeString().slice(0,8); }, 1000);
+setInterval(renderTimeline, 60000);
+
+// ══════════════════════════════════════════════════════
+//  PERSISTENCE
+// ══════════════════════════════════════════════════════
+async function persistSave() {
+  if (!window.api) return;
+  await window.api.saveStorage({
+    playlists, schedules,
+    playLog: playLog.slice(0,2000),
+    settings:{ port: document.getElementById('serverPort').value }
+  });
+}
+async function persistLoad() {
+  if (!window.api) return;
+  const data = await window.api.loadStorage();
+  if (!data) return;
+  if (data.playlists) playlists = data.playlists;
+  if (data.schedules) schedules = data.schedules;
+  if (data.playLog)   playLog   = data.playLog;
+  if (data.settings?.port) document.getElementById('serverPort').value = data.settings.port;
+  renderPlaylistLibrary(); populateAllSelects(); populatePlayerFileSelect();
+  renderSchedules(); renderTimeline(); renderLog(); updateStats();
+}
+setInterval(persistSave, 30000);
+
+// ══════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',TABS[i]===name));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+name));
+  if (name==='log')      { updateStats(); renderLog(); }
+  if (name==='schedule') { renderUpcoming(); renderTimeline(); }
+  if (name==='media')    { populatePlayerFileSelect(); }
+}
+
+// ══════════════════════════════════════════════════════
+//  SERVER
+// ══════════════════════════════════════════════════════
+async function startServer() {
+  const port = parseInt(document.getElementById('serverPort').value);
+  if (window.api) await window.api.startServer(port);
+  serverRunning = true;
+  document.getElementById('btnStartServer').style.display = 'none';
+  document.getElementById('btnStopServer').style.display  = 'inline-block';
+}
+async function stopServer() {
+  if (window.api) await window.api.stopServer();
+  serverRunning = false;
+  players = {};
+  document.getElementById('btnStartServer').style.display = 'inline-block';
+  document.getElementById('btnStopServer').style.display  = 'none';
+  document.getElementById('serverBadge').className = 'server-badge off';
+  document.getElementById('serverBadge').textContent = 'SERVER OFF';
+  document.getElementById('serverInfo').textContent = 'Server stopped.';
+  renderScreens();
+}
+
+if (window.api) {
+  window.api.onServerStatus(s => {
+    if (s.state==='listening') {
+      document.getElementById('serverBadge').className = 'server-badge on';
+      document.getElementById('serverBadge').textContent = 'SERVER ON';
+      document.getElementById('serverInfo').textContent = `Listening on port ${s.port} — Players connect to this machine's LAN IP:${s.port}`;
+    } else if (s.state==='error') {
+      document.getElementById('serverInfo').textContent = 'Error: '+s.message;
+    }
+  });
+  window.api.onPlayerUpdate(p  => { players[p.id]=p; renderScreens(); });
+  window.api.onPlayerConnected(p => { players[p.id]={...players[p.id]||{}, ...p, connected:true}; renderScreens(); updateLogScreenFilter(); populatePlayerFileSelect(); });
+  window.api.onPlayerDisconn(p => { if(players[p.id]) players[p.id].connected=false; renderScreens(); populatePlayerFileSelect(); });
+  window.api.onPlayerHB(hb => {
+    if (players[hb.id]) {
+      Object.assign(players[hb.id], {
+        nowPlaying:hb.nowPlaying, playlistName:hb.playlistName,
+        timecode:hb.timecode, duration:hb.duration,
+        playing:hb.playing, uptime:hb.uptime,
+        resolution:hb.resolution, anchorMode:hb.anchorMode,
+        overlayCount:hb.overlayCount, lastSeen:hb.ts
+      });
+      updateScreenCardInPlace(hb.id);
+    }
+  });
+  window.api.onPopEntry(d => {
+    playLog.unshift({ screen:d.screenName, ...d.entry });
+    renderLog(); updateStats(); persistSave();
+  });
+  window.api.onPlayerError(e => {
+    addScreenAlert(e.id, e.message);
+  });
+  window.api.onPlayersPruned(() => {
+    // Ghost cleanup fired — refresh player list from main process
+    window.api.getPlayers().then(list => {
+      players = {};
+      list.forEach(p => { players[p.id] = p; });
+      renderScreens();
+    });
+  });
+  window.api.onPlayerFiles(d => {
+    if (players[d.id]) players[d.id].files = d.files || [];
+    const sel = document.getElementById('playerFileSelect');
+    if (sel && sel.value === d.id) renderPlayerFiles(d.id);
+    populatePlayerFileSelect();
+  });
+  window.api.onPlayerLoopback(d => {
+    addScreenAlert(d.id, `Loopback: ${d.filename} — ${d.status}`);
+  });
+  window.api.onPlayerLogColl(d => {
+    addScreenAlert(d.id, `Logs at: ${d.logDir}`);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  SCREENS RENDER
+// ══════════════════════════════════════════════════════
+const screenAlerts = {};
+function addScreenAlert(id, msg) {
+  screenAlerts[id] = msg;
+  renderScreens();
+  setTimeout(()=>{ delete screenAlerts[id]; renderScreens(); }, 8000);
+}
+
+function renderScreens() {
+  const grid = document.getElementById('screensGrid');
+  const list = Object.values(players);
+  if (!list.length) {
+    grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;">No screens connected. Start the server and launch FSE-Cast Player on each display machine.</div>';
+    return;
+  }
+  grid.innerHTML = list.map(p => {
+    const live  = p.connected;
+    const alert = screenAlerts[p.id];
+    const cardClass = live ? (alert?'warn':'live') : 'dead';
+    const dotClass  = live ? (alert?'warn':'live') : 'dead';
+    const res = getResolutionLabel(p);
+    const progress = p.timecode && p.duration ? Math.round(p.timecode/p.duration*100) : 0;
+    return `
+    <div class="screen-card ${cardClass}" id="sc-${p.id}">
+      <div class="sc-header">
+        <div class="sc-dot ${dotClass}"></div>
+        <div class="sc-name">${p.name||'Screen'}</div>
+        <div class="sc-mode ${p.anchorMode||'contain'}">${p.anchorMode==='mosaic'?'MOSAIC':'CONTAIN'}</div>
+      </div>
+      ${p.nowPlaying?`
+      <div class="sc-progress"><div class="sc-progress-fill" style="width:${progress}%"></div></div>
+      <div class="sc-playing">▶ ${p.nowPlaying||'—'}${p.playlistName?' · '+p.playlistName:''}</div>`:''}
+      <div class="sc-body">
+        <div class="sc-row">
+          <div class="sc-lbl">Status</div>
+          <div class="sc-val" data-field="status" style="color:${live?'var(--accent)':'var(--danger)'};">${live?(p.playing?'● PLAYING':'○ PAUSED'):'✕ OFFLINE'}</div>
+        </div>
+        <div class="sc-row">
+          <div class="sc-lbl">Resolution</div>
+          <span class="sc-res">${res}</span>
+        </div>
+        <div class="sc-row">
+          <div class="sc-lbl">Uptime</div>
+          <div class="sc-uptime" data-field="uptime">${formatUptime(p.uptime||0)}</div>
+        </div>
+        ${alert?`<div style="margin-top:6px;padding:5px 8px;background:rgba(255,107,53,.1);border:1px solid var(--warn);border-radius:3px;font-size:10px;color:var(--warn);">⚠ ${alert}</div>`:''}
+      </div>
+      <div class="sc-controls">
+        <button class="btn btn-secondary btn-sm" onclick="sendToScreen('${p.id}',{type:'play'})" ${!live?'disabled':''}>▶</button>
+        <button class="btn btn-secondary btn-sm" onclick="sendToScreen('${p.id}',{type:'pause'})" ${!live?'disabled':''}>⏸</button>
+        <button class="btn btn-secondary btn-sm" onclick="sendToScreen('${p.id}',{type:'next'})" ${!live?'disabled':''}>⏭</button>
+        <button class="btn btn-secondary btn-sm" onclick="openPushModalFor('${p.id}')" ${!live?'disabled':''}>⇥ Push</button>
+        <button class="btn btn-secondary btn-sm" onclick="requestFileList('${p.id}')" ${!live?'disabled':''} title="Re-scan C:\\FSE-Cast\\Media on this screen">↺ Files</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateScreenCardInPlace(id) {
+  const p = players[id];
+  if (!p) return;
+  const card = document.getElementById('sc-' + id);
+  if (!card) return; // card not rendered yet — next connect event will trigger full renderScreens
+
+  // Progress bar
+  const progFill = card.querySelector('.sc-progress-fill');
+  if (progFill && p.duration) {
+    progFill.style.width = Math.round(p.timecode / p.duration * 100) + '%';
+  }
+  // Now playing label
+  const playingEl = card.querySelector('.sc-playing');
+  if (playingEl) {
+    playingEl.textContent = (p.nowPlaying ? '▶ ' + p.nowPlaying : '') +
+      (p.playlistName ? ' · ' + p.playlistName : '');
+  }
+  // Status row
+  const statusEl = card.querySelector('[data-field="status"]');
+  if (statusEl) {
+    statusEl.textContent = p.playing ? '● PLAYING' : '○ PAUSED';
+    statusEl.style.color = p.playing ? 'var(--accent)' : 'var(--muted)';
+  }
+  // Uptime
+  const uptimeEl = card.querySelector('[data-field="uptime"]');
+  if (uptimeEl) uptimeEl.textContent = formatUptime(p.uptime || 0);
+}
+
+function getResolutionLabel(p) {
+  if (p.resolution) return p.resolution;
+  if (p.anchorMode==='mosaic') return '20480×1440';
+  return '1920×1080';
+}
+function formatUptime(secs) {
+  if (!secs) return '—';
+  const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=secs%60;
+  return h?`${h}h ${m}m`:`${m}m ${s}s`;
+}
+
+// ══════════════════════════════════════════════════════
+//  SEND COMMANDS
+// ══════════════════════════════════════════════════════
+function sendToScreen(id, payload) {
+  if (window.api) window.api.sendToPlayer(id, payload);
+}
+function requestFileList(id) {
+  sendToScreen(id, { type:'request-file-list' });
+  addScreenAlert(id, 'Requesting file list…');
+  // Also update media tab if this player is selected
+  const sel = document.getElementById('playerFileSelect');
+  if (sel && sel.value === id) {
+    const info = document.getElementById('playerFilesInfo');
+    if (info) info.innerHTML = `Requesting file list from <strong>${players[id]?.name||'screen'}</strong>…`;
+  }
+}
+function broadcastCmd(payload) {
+  if (window.api) window.api.broadcast(payload);
+}
+function pushScheduleToAll() {
+  if (!schedules.length) { alert('No schedules to push'); return; }
+  // Embed playlist objects into schedule for player self-scheduling
+  const enriched = schedules.map(s=>({ ...s, playlist: playlists.find(p=>p.id===s.playlistId)||null }));
+  broadcastCmd({ type:'load-schedule', schedules:enriched });
+  alert('Schedule pushed to all connected screens.');
+}
+
+// ══════════════════════════════════════════════════════
+//  PUSH PLAYLIST MODAL
+// ══════════════════════════════════════════════════════
+let pushTargetId = null;
+function openPushModal() { pushTargetId=null; _openPushModal(); }
+function openPushModalFor(id) { pushTargetId=id; _openPushModal(); }
+function _openPushModal() {
+  populateAllSelects();
+  const sel = document.getElementById('pushTargetSelect');
+  sel.innerHTML = '<option value="all">All Connected Screens</option>' +
+    Object.values(players).filter(p=>p.connected).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  if (pushTargetId) sel.value = pushTargetId;
+  document.getElementById('modalPush').classList.add('open');
+}
+function pushPlaylist() {
+  const plId   = document.getElementById('pushPlaylistSelect').value;
+  const target = document.getElementById('pushTargetSelect').value;
+  const pl = playlists.find(p=>p.id===plId);
+  if (!pl) { alert('Choose a playlist'); return; }
+  const cmd = { type:'load-playlist', playlist:pl, autoplay:true };
+  if (target==='all') broadcastCmd(cmd);
+  else sendToScreen(target, cmd);
+  closeModal('modalPush');
+}
+
+// ══════════════════════════════════════════════════════
+//  EMERGENCY
+// ══════════════════════════════════════════════════════
+function openEmergencyModal() {
+  document.getElementById('emergencyPlaylistSelect').innerHTML = playlists.map(pl=>`<option value="${pl.id}">${pl.name}</option>`).join('');
+  document.getElementById('btnEmergencyActivate').style.display = emergencyActive?'none':'inline-block';
+  document.getElementById('btnEmergencyCancel').style.display   = emergencyActive?'inline-block':'none';
+  document.getElementById('modalEmergency').classList.add('open');
+}
+function activateEmergency() {
+  const plId  = document.getElementById('emergencyPlaylistSelect').value;
+  const label = document.getElementById('emergencyLabelInput').value.trim()||'EMERGENCY OVERRIDE';
+  const pl    = playlists.find(p=>p.id===plId);
+  if (!pl) { alert('Choose a playlist'); return; }
+  emergencyActive=true;
+  document.getElementById('emergencyBanner').classList.add('active');
+  document.getElementById('emergencyLabel').textContent=label;
+  broadcastCmd({ type:'emergency', label, playlist:pl });
+  closeModal('modalEmergency');
+}
+function cancelEmergency() {
+  emergencyActive=false;
+  document.getElementById('emergencyBanner').classList.remove('active');
+  broadcastCmd({ type:'emergency-cancel' });
+  closeModal('modalEmergency');
+}
+
+// ══════════════════════════════════════════════════════
+//  PLAYER FILES  (replaces local media library)
+// ══════════════════════════════════════════════════════
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+// selectedPlayerFiles: Set of filenames currently selected in the grid
+let selectedPlayerFiles = new Set();
+
+// Populate the screen selector in the Media tab
+function populatePlayerFileSelect() {
+  const sel = document.getElementById('playerFileSelect');
+  if (!sel) return;
+  const cur = sel.value;
+  const connected = Object.values(players).filter(p => p.connected);
+  sel.innerHTML = '<option value="">— select a screen —</option>' +
+    connected.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  if (cur && connected.find(p => p.id === cur)) sel.value = cur;
+}
+
+// Render the file grid for a given player id
+function renderPlayerFiles(playerId) {
+  const grid   = document.getElementById('playerFileGrid');
+  const info   = document.getElementById('playerFilesInfo');
+  const count  = document.getElementById('playerFilesCount');
+  if (!grid) return;
+
+  selectedPlayerFiles.clear();
+  document.getElementById('playerFileDetail').innerHTML = '<div class="card-body empty-state">Select a file</div>';
+
+  if (!playerId) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No screen selected</div>';
+    if (count) count.textContent = '';
+    return;
+  }
+
+  const player = players[playerId];
+  if (!player) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">Screen not found</div>';
+    return;
+  }
+  if (!player.connected) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">Screen is offline</div>';
+    return;
+  }
+
+  const files = player.files || [];
+  if (info) info.innerHTML = `Showing files on <strong>${player.name}</strong> — <code>C:\\FSE-Cast\\Media</code>. Copy new files via Windows Explorer, then hit <strong>↺ Refresh</strong>.`;
+  if (count) count.textContent = files.length + ' file' + (files.length !== 1 ? 's' : '');
+
+  if (!files.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No media files found in C:\\FSE-Cast\\Media on this screen.<br>Copy files there and click Refresh.</div>';
+    return;
+  }
+
+  grid.innerHTML = files.map(name => {
+    const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(name);
+    const icon  = isVid ? '🎬' : '🖼';
+    return `<div class="thumb-item" id="pf-${CSS.escape(name)}"
+      onclick="selectPlayerFile(event,'${name.replace(/'/g,"\\'")}')">
+      <div class="thumb-preview" style="background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:26px;">${icon}</div>
+      <div class="thumb-label" title="${name}">${name}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectPlayerFile(e, name) {
+  if (e.ctrlKey || e.metaKey) {
+    selectedPlayerFiles.has(name) ? selectedPlayerFiles.delete(name) : selectedPlayerFiles.add(name);
+  } else if (e.shiftKey) {
+    const sel = document.getElementById('playerFileSelect');
+    const files = players[sel?.value]?.files || [];
+    const last  = [...selectedPlayerFiles].pop();
+    const a = files.indexOf(last), b = files.indexOf(name);
+    if (a >= 0 && b >= 0) files.slice(Math.min(a,b), Math.max(a,b)+1).forEach(f => selectedPlayerFiles.add(f));
+    else selectedPlayerFiles.add(name);
+  } else {
+    selectedPlayerFiles.clear();
+    selectedPlayerFiles.add(name);
+  }
+  // Update visual selection
+  document.querySelectorAll('#playerFileGrid .thumb-item').forEach(el => {
+    const fn = el.querySelector('.thumb-label')?.textContent;
+    el.classList.toggle('selected', fn ? selectedPlayerFiles.has(fn) : false);
+  });
+  // Show detail for single selection
+  if (selectedPlayerFiles.size === 1) renderPlayerFileDetail(name);
+}
+
+function renderPlayerFileDetail(name) {
+  const card = document.getElementById('playerFileDetail');
+  if (!card) return;
+  const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(name);
+  const ext   = name.split('.').pop().toUpperCase();
+  card.innerHTML = `<div class="card-body">
+    <div style="aspect-ratio:16/9;background:#000;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:10px;">${isVid?'🎬':'🖼'}</div>
+    <div style="font-family:var(--display);font-size:14px;font-weight:700;margin-bottom:4px;word-break:break-all;">${name}</div>
+    <div style="font-size:11px;color:var(--muted);">Type: ${ext} · ${isVid?'Video':'Image'}</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px;">File lives on each Player at C:\\FSE-Cast\\Media\\${name}</div>
+  </div>`;
+}
+
+// Send request-file-list command to the selected player
+function refreshPlayerFiles() {
+  const sel = document.getElementById('playerFileSelect');
+  if (!sel || !sel.value) { alert('Select a screen first'); return; }
+  const player = players[sel.value];
+  if (!player || !player.connected) { alert('Screen is offline'); return; }
+  sendToScreen(sel.value, { type: 'request-file-list' });
+  const info = document.getElementById('playerFilesInfo');
+  if (info) info.innerHTML = `Requesting file list from <strong>${player.name}</strong>… `;
+}
+
+function addSelectedToPlaylist() {
+  const plId = document.getElementById('addToPlaylistSelect').value;
+  if (!plId) { alert('Choose a playlist'); return; }
+  const pl = playlists.find(p => p.id === plId);
+  if (!pl) return;
+  if (!selectedPlayerFiles.size) { alert('Select at least one file'); return; }
+  const imgDur = parseInt(document.getElementById('defaultImgDur')?.value || 10);
+  let added = 0;
+  selectedPlayerFiles.forEach(name => {
+    if (pl.items.find(it => it.filename === name)) return; // skip dupes
+    const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(name);
+    pl.items.push({ id:uid(), filename:name, type:isVid?'video':'image', duration:isVid?0:imgDur });
+    added++;
+  });
+  persistSave();
+  alert(`Added ${added} file(s) to "${pl.name}"`);
+}
+
+function addAllToPlaylist() {
+  const sel = document.getElementById('playerFileSelect');
+  if (!sel || !sel.value) { alert('Select a screen first'); return; }
+  const files = players[sel.value]?.files || [];
+  if (!files.length) { alert('No files to add'); return; }
+  const plId = document.getElementById('addToPlaylistSelect').value;
+  if (!plId) { alert('Choose a playlist'); return; }
+  const pl = playlists.find(p => p.id === plId);
+  if (!pl) return;
+  const imgDur = parseInt(document.getElementById('defaultImgDur')?.value || 10);
+  let added = 0;
+  files.forEach(name => {
+    if (pl.items.find(it => it.filename === name)) return;
+    const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(name);
+    pl.items.push({ id:uid(), filename:name, type:isVid?'video':'image', duration:isVid?0:imgDur });
+    added++;
+  });
+  persistSave();
+  alert(`Added ${added} file(s) to "${pl.name}"`);
+}
+
+// Legacy stub — keep so any old references don't crash
+function renderMediaLibrary() { populatePlayerFileSelect(); }
+
+
+// ══════════════════════════════════════════════════════
+//  PLAYLISTS
+// ══════════════════════════════════════════════════════
+function openNewPlaylistModal(){document.getElementById('newPlName').value='';document.getElementById('newPlNotes').value='';document.getElementById('modalNewPlaylist').classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+function createPlaylist(){
+  const name=document.getElementById('newPlName').value.trim();
+  if(!name){alert('Enter a name');return;}
+  const pl={id:uid(),name,mode:document.getElementById('newPlMode').value,notes:document.getElementById('newPlNotes').value.trim(),items:[]};
+  playlists.push(pl); closeModal('modalNewPlaylist'); renderPlaylistLibrary(); populateAllSelects(); selectEditPlaylist(pl.id); persistSave();
+}
+function duplicatePlaylist(){
+  if(!editingPlaylistId){alert('Select a playlist first');return;}
+  const src=playlists.find(p=>p.id===editingPlaylistId);if(!src)return;
+  const copy={...src,id:uid(),name:src.name+' (copy)',items:src.items.map(it=>({...it,id:uid()}))};
+  playlists.push(copy); renderPlaylistLibrary(); populateAllSelects(); selectEditPlaylist(copy.id); persistSave();
+}
+function renderPlaylistLibrary(){
+  const ul=document.getElementById('playlistLibrary');
+  if(!playlists.length){ul.innerHTML='<li class="empty-state">No playlists</li>';return;}
+  ul.innerHTML=playlists.map(pl=>`
+    <li class="list-item ${editingPlaylistId===pl.id?'selected':''}" onclick="selectEditPlaylist('${pl.id}')">
+      <div style="flex:1;min-width:0;"><div class="item-name">${pl.name}</div><div class="item-sub">${pl.items.length} items · ${pl.notes||''}</div></div>
+      <span class="badge badge-${pl.mode==='loop'?'loop':pl.mode==='once'?'once':'shuffle'}">${pl.mode}</span>
+      <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deletePlaylist('${pl.id}')">✕</button>
+    </li>`).join('');
+}
+function deletePlaylist(id){
+  if(!confirm('Delete?'))return;
+  playlists=playlists.filter(p=>p.id!==id);
+  if(editingPlaylistId===id){editingPlaylistId=null;renderEditQueue();}
+  renderPlaylistLibrary(); populateAllSelects(); persistSave();
+}
+function selectEditPlaylist(id){
+  editingPlaylistId=id; selectedEditIdx=-1;
+  const pl=playlists.find(p=>p.id===id);
+  if(pl){document.getElementById('plEditName').value=pl.name;document.getElementById('plEditMode').value=pl.mode;document.getElementById('plEditNotes').value=pl.notes||'';}
+  renderPlaylistLibrary(); renderEditQueue();
+}
+function updatePlaylistSettings(){
+  const pl=playlists.find(p=>p.id===editingPlaylistId);if(!pl)return;
+  pl.name=document.getElementById('plEditName').value;pl.mode=document.getElementById('plEditMode').value;pl.notes=document.getElementById('plEditNotes').value;
+  renderPlaylistLibrary(); populateAllSelects(); persistSave();
+}
+function renderEditQueue(){
+  const pl=playlists.find(p=>p.id===editingPlaylistId);
+  document.getElementById('editingPlaylistName').textContent=pl?pl.name:'none';
+  document.getElementById('editItemCount').textContent=pl?pl.items.length+' items':'';
+  const ul=document.getElementById('editQueueList');
+  if(!pl||!pl.items.length){ul.innerHTML='<li class="empty-state">No items</li>';return;}
+  ul.innerHTML=pl.items.map((item,i)=>`
+    <li class="list-item ${i===selectedEditIdx?'active-item':''}" onclick="selectedEditIdx=${i};renderEditQueue();">
+      <span class="item-num">${i+1}</span>
+      <div class="item-name">${item.type==='video'?'🎬':'🖼'} ${item.filename}</div>
+      <span class="item-meta">${formatDur(item.duration)}</span>
+    </li>`).join('');
+}
+function moveItemUp(){const pl=playlists.find(p=>p.id===editingPlaylistId);if(!pl||selectedEditIdx<=0)return;[pl.items[selectedEditIdx-1],pl.items[selectedEditIdx]]=[pl.items[selectedEditIdx],pl.items[selectedEditIdx-1]];selectedEditIdx--;renderEditQueue();persistSave();}
+function moveItemDown(){const pl=playlists.find(p=>p.id===editingPlaylistId);if(!pl||selectedEditIdx<0||selectedEditIdx>=pl.items.length-1)return;[pl.items[selectedEditIdx],pl.items[selectedEditIdx+1]]=[pl.items[selectedEditIdx+1],pl.items[selectedEditIdx]];selectedEditIdx++;renderEditQueue();persistSave();}
+function removeSelectedItem(){const pl=playlists.find(p=>p.id===editingPlaylistId);if(!pl||selectedEditIdx<0)return;pl.items.splice(selectedEditIdx,1);selectedEditIdx=Math.min(selectedEditIdx,pl.items.length-1);renderEditQueue();persistSave();}
+function openAddFromLibrary(){
+  if(!editingPlaylistId){alert('Select a playlist first');return;}
+  // Build combined file list from all connected players (deduplicated)
+  const allFiles = [...new Set(
+    Object.values(players).filter(p=>p.connected && p.files?.length)
+      .flatMap(p=>p.files)
+  )].sort();
+  if(!allFiles.length){
+    alert('No files found on any connected screen.\nSelect a screen in the Player Files tab and hit Refresh first.');
+    return;
+  }
+  document.getElementById('libModalGrid').innerHTML = allFiles.map(name=>{
+    const isVid = /\.(mp4|mov|webm|avi|mkv)$/i.test(name);
+    return `<div class="thumb-item" id="ml-${CSS.escape(name)}" onclick="this.classList.toggle('selected')" title="${name}">
+      <div class="thumb-preview" style="background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px;">${isVid?'🎬':'🖼'}</div>
+      <div class="thumb-label">${name}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('modalAddFromLib').classList.add('open');
+}
+function confirmAddFromLibrary(){
+  const pl=playlists.find(p=>p.id===editingPlaylistId);if(!pl)return;
+  const imgDur = parseInt(document.getElementById('defaultImgDur')?.value||10);
+  document.querySelectorAll('#libModalGrid .thumb-item.selected').forEach(el=>{
+    const name = el.querySelector('.thumb-label')?.textContent;
+    if(!name) return;
+    if(pl.items.find(it=>it.filename===name)) return; // skip dupes
+    const isVid=/\.(mp4|mov|webm|avi|mkv)$/i.test(name);
+    pl.items.push({id:uid(),filename:name,type:isVid?'video':'image',duration:isVid?0:imgDur});
+  });
+  closeModal('modalAddFromLib'); renderEditQueue(); persistSave();
+}
+
+// ══════════════════════════════════════════════════════
+//  SCHEDULE
+// ══════════════════════════════════════════════════════
+function populateAllSelects(){
+  ['addToPlaylistSelect','pushPlaylistSelect','newSchedPlaylist','emergencyPlaylistSelect'].forEach(sid=>{
+    const sel=document.getElementById(sid);if(!sel)return;
+    const cur=sel.value;
+    const blank=sid==='addToPlaylistSelect'?'<option value="">— choose —</option>':'';
+    sel.innerHTML=blank+playlists.map(pl=>`<option value="${pl.id}">${pl.name}</option>`).join('');
+    if(cur)sel.value=cur;
+  });
+}
+function openNewSchedModal(){
+  if(!playlists.length){alert('Create a playlist first');return;}
+  populateAllSelects();
+  document.getElementById('newSchedName').value='';
+  document.getElementById('newSchedDateStart').value='';
+  document.getElementById('newSchedDateEnd').value='';
+  document.getElementById('modalNewSched').classList.add('open');
+}
+function createSchedule(){
+  const name=document.getElementById('newSchedName').value.trim();
+  const plId=document.getElementById('newSchedPlaylist').value;
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].filter(d=>document.getElementById('d'+d).checked);
+  if(!name||!plId||!days.length){alert('Fill all required fields');return;}
+  schedules.push({id:uid(),name,start:document.getElementById('newSchedStart').value,end:document.getElementById('newSchedEnd').value,playlistId:plId,days,dateStart:document.getElementById('newSchedDateStart').value||null,dateEnd:document.getElementById('newSchedDateEnd').value||null,priority:parseInt(document.getElementById('newSchedPriority').value)||0});
+  closeModal('modalNewSched'); renderSchedules(); renderTimeline(); renderUpcoming(); persistSave();
+}
+function renderSchedules(){
+  const ul=document.getElementById('schedList');
+  if(!schedules.length){ul.innerHTML='<li class="empty-state">No slots</li>';return;}
+  const allDays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  ul.innerHTML=[...schedules].sort((a,b)=>a.start.localeCompare(b.start)).map(s=>{
+    const pl=playlists.find(p=>p.id===s.playlistId);
+    const hasDates=s.dateStart||s.dateEnd;
+    return `<li class="sched-item">
+      <div class="sched-time">${s.start}</div>
+      <div class="sched-meta">
+        <div class="sched-name">${s.name}${hasDates?`<span class="date-range-tag">${s.dateStart||'∞'} → ${s.dateEnd||'∞'}</span>`:''}</div>
+        <div class="sched-sub">${pl?pl.name:'(deleted)'} · until ${s.end}</div>
+        <div class="sched-days">${allDays.map(d=>`<div class="day-pill ${s.days.includes(d)?'on':''}">${d[0]}</div>`).join('')}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.id}')">✕</button>
+    </li>`;
+  }).join('');
+}
+function deleteSchedule(id){schedules=schedules.filter(s=>s.id!==id);renderSchedules();renderTimeline();renderUpcoming();persistSave();}
+function renderUpcoming(){
+  const ul=document.getElementById('upcomingList');
+  const now=new Date();const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];const seen=new Set();const items=[];
+  for(let h=0;h<24;h++){
+    const t=new Date(now.getTime()+h*3600000);
+    const hhmm=t.toTimeString().slice(0,5);const dow=days[t.getDay()];const todayDate=t.toISOString().slice(0,10);
+    schedules.forEach(s=>{
+      if(!s.days.includes(dow)||hhmm<s.start||hhmm>=s.end||seen.has(s.id))return;
+      if(s.dateStart&&todayDate<s.dateStart)return;if(s.dateEnd&&todayDate>s.dateEnd)return;
+      seen.add(s.id);items.push(s);
+    });
+  }
+  if(!items.length){ul.innerHTML='<li class="empty-state">None</li>';return;}
+  ul.innerHTML=items.map(s=>`<li class="list-item"><div class="item-name">⏱ ${s.name}</div><div class="item-meta">${s.start}–${s.end}</div></li>`).join('');
+}
+function renderTimeline(){
+  const tl=document.getElementById('timeline');
+  const now=new Date();const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const today=days[now.getDay()];const todayDate=now.toISOString().slice(0,10);
+  const colors=['#00e5a0','#0066ff','#ff6b35','#a855f7','#f59e0b','#ec4899'];
+  let html='';
+  for(let h=0;h<=24;h+=2){const pct=h/24*100;html+=`<div class="timeline-hour" style="left:${pct}%;">${String(h).padStart(2,'0')}:00</div>`;}
+  const nowPct=((now.getHours()*60+now.getMinutes())/1440)*100;
+  html+=`<div style="position:absolute;top:0;bottom:0;left:${nowPct}%;width:2px;background:var(--danger);z-index:2;"></div>`;
+  schedules.filter(s=>s.days.includes(today)).forEach((s,i)=>{
+    if(s.dateStart&&todayDate<s.dateStart)return;if(s.dateEnd&&todayDate>s.dateEnd)return;
+    const[sh,sm]=s.start.split(':').map(Number);const[eh,em]=s.end.split(':').map(Number);
+    const sp=((sh*60+sm)/1440)*100,ep=((eh*60+em)/1440)*100;
+    const c=colors[i%colors.length];
+    html+=`<div class="timeline-block" style="left:${sp}%;width:${ep-sp}%;background:${c}22;border:1px solid ${c};color:${c};">${s.name}</div>`;
+  });
+  tl.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════
+//  PROOF OF PLAY
+// ══════════════════════════════════════════════════════
+function renderLog(){
+  const dateVal=document.getElementById('logFilterDate').value;
+  const screenVal=document.getElementById('logFilterScreen').value;
+  const tbody=document.getElementById('logBody');
+  let entries=playLog;
+  if(dateVal) entries=entries.filter(e=>e.ts&&e.ts.startsWith(dateVal));
+  if(screenVal) entries=entries.filter(e=>e.screen===screenVal);
+  if(!entries.length){tbody.innerHTML=`<tr><td colspan="7" class="empty-state">No entries</td></tr>`;return;}
+  tbody.innerHTML=entries.map((e,i)=>`
+    <tr>
+      <td style="color:var(--muted)">${entries.length-i}</td>
+      <td><span class="tag">${e.screen||'—'}</span></td>
+      <td>${(e.ts||'').replace('T',' ').slice(0,19)}</td>
+      <td>${e.type==='video'?'🎬':'🖼'} ${e.file||'—'}</td>
+      <td>${e.playlist||'—'}</td>
+      <td>${formatDur(e.duration)}</td>
+      <td><span class="log-result ${e.result==='OK'?'result-ok':'result-err'}">${e.result||'—'}</span></td>
+    </tr>`).join('');
+}
+function updateStats(){
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('statTotal').textContent=playLog.length;
+  document.getElementById('statToday').textContent=playLog.filter(e=>e.ts&&e.ts.startsWith(today)).length;
+  document.getElementById('statErrors').textContent=playLog.filter(e=>e.result==='ERR').length;
+  document.getElementById('statScreens').textContent=Object.values(players).filter(p=>p.connected).length;
+}
+function updateLogScreenFilter(){
+  const sel=document.getElementById('logFilterScreen');
+  const cur=sel.value;
+  const names=[...new Set(Object.values(players).map(p=>p.name))];
+  sel.innerHTML='<option value="">All Screens</option>'+names.map(n=>`<option value="${n}">${n}</option>`).join('');
+  if(cur)sel.value=cur;
+}
+function clearFilters(){document.getElementById('logFilterDate').value='';document.getElementById('logFilterScreen').value='';renderLog();}
+function exportLog(){
+  const entries=playLog;if(!entries.length){alert('No entries');return;}
+  const csv=[['Screen','Timestamp','File','Type','Playlist','Duration','Resolution','Trigger','Result'],...entries.map(e=>[e.screen,e.ts,e.file,e.type,e.playlist,e.duration,e.resolution,e.trigger,e.result])].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  if(window.api){window.api.exportLogCSV(csv);return;}
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`pop-export-${new Date().toISOString().slice(0,10)}.csv`});a.click();
+}
+function clearLog(){if(confirm('Clear log?')){playLog=[];renderLog();updateStats();persistSave();}}
+function openDataFolder(){if(window.api)window.api.openDataFolder();}
+
+// ══════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════
+function formatDur(s){if(!s||s<0)return'—';s=Math.round(s);return`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+(async function(){
+  await persistLoad();
+  populateAllSelects();
+  renderTimeline();
+  // Auto-start server on last used port
+  if (window.api) startServer();
+})();
+</script>
+</body>
+</html>
+<script>
+// ── PATCH: inject new tabs, overlay tab, v1.2/1.4/1.5 additions ──
+// This script runs after the existing page and patches in new features
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  // ── 1. Add Overlays tab to nav ──
+  const navTabs = document.querySelector('.nav-tabs');
+  const logTab  = [...navTabs.querySelectorAll('.nav-tab')].find(t=>t.textContent.includes('Proof'));
+  const ovTab   = document.createElement('button');
+  ovTab.className = 'nav-tab';
+  ovTab.textContent = '⊕ Overlays';
+  ovTab.onclick = ()=>switchTab('overlays');
+  navTabs.insertBefore(ovTab, logTab);
+  TABS.splice(TABS.indexOf('log'), 0, 'overlays');
+
+  // ── 2. Inject Overlays panel ──
+  const overlayPanel = document.createElement('div');
+  overlayPanel.className = 'panel';
+  overlayPanel.id = 'panel-overlays';
+  overlayPanel.innerHTML = `
+  <div class="panel-grid">
+    <div>
+      <div class="section-title">Logo Overlays</div>
+      <div class="card">
+        <div class="card-header"><span class="accent">+</span> ADD OVERLAY</div>
+        <div class="card-body">
+          <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-input" id="ovName" placeholder="e.g. Client Logo">
+          </div>
+          <div class="form-group" style="margin-bottom:10px;">
+            <label class="form-label">Image File (PNG/SVG recommended)</label>
+            <div class="drop-zone" id="ovDropZone" style="padding:14px;">
+              <input type="file" id="ovFileInput" accept="image/*" onchange="handleOverlayImport(event)">
+              <div class="drop-icon">🖼</div>
+              <div class="drop-msg">Drop image or click to browse</div>
+            </div>
+          </div>
+          <div id="ovPreviewWrap" style="display:none;margin-bottom:10px;">
+            <img id="ovPreview" style="max-width:100%;max-height:100px;object-fit:contain;background:#000;border-radius:3px;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div class="form-group">
+              <label class="form-label">X Position (%)</label>
+              <input type="number" class="form-input" id="ovX" value="80" min="0" max="100">
+              <div style="font-size:9px;color:var(--muted);margin-top:2px;">0=left edge · 100=right edge</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Y Position (%)</label>
+              <input type="number" class="form-input" id="ovY" value="5" min="0" max="100">
+              <div style="font-size:9px;color:var(--muted);margin-top:2px;">0=top · 100=bottom</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Width (% of screen)</label>
+              <input type="number" class="form-input" id="ovWidth" value="10" min="1" max="100">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Opacity (0–1)</label>
+              <input type="number" class="form-input" id="ovOpacity" value="1" min="0" max="1" step="0.05">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="addOverlay()">Add Overlay</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title">Manage & Push</div>
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-header"><span class="accent">≡</span> OVERLAYS <span class="ml" id="ovCount" style="color:var(--accent);font-size:11px;">0</span></div>
+        <ul class="item-list" id="overlayList"><li class="empty-state">No overlays configured</li></ul>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="accent">⇥</span> PUSH TO SCREENS</div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group" style="flex:1;"><label class="form-label">Target</label>
+              <select class="form-input" id="ovPushTarget">
+                <option value="all">All Connected Screens</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="pushOverlays()">Push</button>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="clearOverlays()" style="margin-top:6px;">✕ Clear All Overlays on All Screens</button>
+          <div class="info-bar" style="margin-top:10px;">Overlays are pushed as image data — players render them at the configured position. Use PNG with transparency for best results.</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.querySelector('.panel:last-of-type').after(overlayPanel);
+
+  // ── 3. Enhance schedule modal with v1.5 fields ──
+  const schedModal = document.getElementById('modalNewSched');
+  const schedFooter = schedModal.querySelector('.modal-footer');
+  const v15Fields = document.createElement('div');
+  v15Fields.innerHTML = `
+    <hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">
+    <div style="font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Advanced (v1.5)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div class="form-group">
+        <label class="form-label">Max plays per hour <span style="color:var(--muted)">(0=unlimited)</span></label>
+        <input type="number" class="form-input" id="newSchedMaxPlays" value="0" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Interstitial every N clips <span style="color:var(--muted)">(0=off)</span></label>
+        <input type="number" class="form-input" id="newSchedInterstitialEvery" value="0" min="0">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label">Interstitial Playlist <span style="color:var(--muted)">(if above > 0)</span></label>
+      <select class="form-input" id="newSchedInterstitialPlaylist"><option value="">— none —</option></select>
+    </div>`;
+  schedModal.insertBefore(v15Fields, schedFooter);
+
+  // ── 4. Add schedule import/export buttons ──
+  const schedHeader = document.querySelector('#panel-schedule > div:first-child');
+  const exportBtn = document.createElement('button');
+  exportBtn.className='btn btn-secondary btn-sm';
+  exportBtn.textContent='↓ Export';
+  exportBtn.onclick = exportSchedule;
+  const importBtn = document.createElement('button');
+  importBtn.className='btn btn-secondary btn-sm';
+  importBtn.textContent='↑ Import';
+  importBtn.onclick = ()=>document.getElementById('schedImportInput').click();
+  const importInput = document.createElement('input');
+  importInput.type='file'; importInput.accept='.json'; importInput.id='schedImportInput'; importInput.style.display='none';
+  importInput.onchange = importSchedule;
+  schedHeader.append(exportBtn, importBtn, importInput);
+
+  // ── 5. Enhance existing createSchedule to capture v1.5 fields ──
+  const origCreate = window.createSchedule;
+  window.createSchedule = function() {
+    // Let original run first then patch
+    const name=document.getElementById('newSchedName').value.trim();
+    const plId=document.getElementById('newSchedPlaylist').value;
+    const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].filter(d=>document.getElementById('d'+d).checked);
+    if(!name||!plId||!days.length){alert('Fill all required fields');return;}
+    const entry = {
+      id:uid(), name,
+      start:document.getElementById('newSchedStart').value,
+      end:document.getElementById('newSchedEnd').value,
+      playlistId:plId, days,
+      dateStart:document.getElementById('newSchedDateStart').value||null,
+      dateEnd:document.getElementById('newSchedDateEnd').value||null,
+      priority:parseInt(document.getElementById('newSchedPriority').value)||0,
+      maxPlaysPerHour:parseInt(document.getElementById('newSchedMaxPlays').value)||0,
+      interstitialEvery:parseInt(document.getElementById('newSchedInterstitialEvery').value)||0,
+      interstitialPlaylistId:document.getElementById('newSchedInterstitialPlaylist').value||null,
+    };
+    schedules.push(entry);
+    closeModal('modalNewSched');
+    renderSchedules(); renderTimeline(); renderUpcoming(); persistSave();
+  };
+
+  // ── 6. Patch populateAllSelects to include interstitial select ──
+  const origPopulate = window.populateAllSelects;
+  window.populateAllSelects = function() {
+    origPopulate();
+    const iSel = document.getElementById('newSchedInterstitialPlaylist');
+    if (iSel) {
+      const cur=iSel.value;
+      iSel.innerHTML='<option value="">— none —</option>'+playlists.map(pl=>`<option value="${pl.id}">${pl.name}</option>`).join('');
+      if(cur) iSel.value=cur;
+    }
+    // Populate overlay push target
+    const ovSel=document.getElementById('ovPushTarget');
+    if (ovSel) {
+      ovSel.innerHTML='<option value="all">All Connected Screens</option>'+Object.values(players).filter(p=>p.connected).map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+    }
+  };
+
+  // ── 7. Patch renderSchedules to show v1.5 badges ──
+  const origRenderSched = window.renderSchedules;
+  window.renderSchedules = function() {
+    origRenderSched();
+    // Add v1.5 badges to existing rendered items
+    document.querySelectorAll('#schedList .sched-item').forEach((el,i)=>{
+      const sorted=[...schedules].sort((a,b)=>a.start.localeCompare(b.start));
+      const s=sorted[i];if(!s)return;
+      const meta=el.querySelector('.sched-meta');if(!meta)return;
+      let extra='';
+      if(s.maxPlaysPerHour>0) extra+=`<span class="tag" style="margin-right:4px;">Max ${s.maxPlaysPerHour}/hr</span>`;
+      if(s.interstitialEvery>0) extra+=`<span class="tag">Interstitial every ${s.interstitialEvery}</span>`;
+      if(extra){const row=document.createElement('div');row.style.marginTop='4px';row.innerHTML=extra;meta.appendChild(row);}
+    });
+  };
+
+  // ── 8. Patch pushScheduleToAll to include v1.5 fields ──
+  window.pushScheduleToAll = function() {
+    if (!schedules.length) { alert('No schedules to push'); return; }
+    const enriched = schedules.map(s=>({
+      ...s,
+      playlist: playlists.find(p=>p.id===s.playlistId)||null,
+      interstitialPlaylist: s.interstitialPlaylistId ? playlists.find(p=>p.id===s.interstitialPlaylistId)||null : null
+    }));
+    broadcastCmd({ type:'load-schedule', schedules:enriched });
+    alert('Schedule pushed to all connected screens.');
+  };
+
+  // ── 9. Enhanced screen card — add transition/audio controls to playlist editor ──
+  patchPlaylistEditor();
+
+  renderOverlayList();
+});
+
+// ══════════════════════════════════════
+//  OVERLAY MANAGEMENT
+// ══════════════════════════════════════
+let overlayConfigs = [];
+let pendingOverlaySrc = null;
+
+function handleOverlayImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    pendingOverlaySrc = ev.target.result;
+    document.getElementById('ovPreview').src = pendingOverlaySrc;
+    document.getElementById('ovPreviewWrap').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+
+function addOverlay() {
+  const name = document.getElementById('ovName').value.trim();
+  if (!name) { alert('Enter a name'); return; }
+  if (!pendingOverlaySrc) { alert('Select an image file'); return; }
+  const ov = {
+    id: uid(), name,
+    srcData: pendingOverlaySrc,
+    x: parseFloat(document.getElementById('ovX').value)||0,
+    y: parseFloat(document.getElementById('ovY').value)||0,
+    width: parseFloat(document.getElementById('ovWidth').value)||10,
+    opacity: parseFloat(document.getElementById('ovOpacity').value)||1,
+    enabled: true
+  };
+  overlayConfigs.push(ov);
+  pendingOverlaySrc = null;
+  document.getElementById('ovPreviewWrap').style.display='none';
+  document.getElementById('ovName').value='';
+  renderOverlayList();
+  persistSave();
+}
+
+function renderOverlayList() {
+  const ul = document.getElementById('overlayList');
+  if (!ul) return;
+  document.getElementById('ovCount').textContent = overlayConfigs.length;
+  if (!overlayConfigs.length) { ul.innerHTML='<li class="empty-state">No overlays</li>'; return; }
+  ul.innerHTML = overlayConfigs.map(ov=>`
+    <li class="list-item">
+      <img src="${ov.srcData}" style="width:36px;height:24px;object-fit:contain;background:#000;border-radius:2px;flex-shrink:0;">
+      <div style="flex:1;min-width:0;">
+        <div class="item-name">${ov.name}</div>
+        <div class="item-sub">X: ${ov.x}% · Y: ${ov.y}% · W: ${ov.width}% · Opacity: ${ov.opacity}</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;">
+        <input type="checkbox" ${ov.enabled!==false?'checked':''} onchange="toggleOverlay('${ov.id}',this.checked)" style="accent-color:var(--accent);">
+        <span style="font-size:10px;color:var(--muted);">On</span>
+      </label>
+      <button class="btn btn-danger btn-sm" onclick="removeOverlay('${ov.id}')">✕</button>
+    </li>`).join('');
+}
+
+function toggleOverlay(id, enabled) {
+  const ov = overlayConfigs.find(o=>o.id===id);
+  if (ov) { ov.enabled=enabled; persistSave(); }
+}
+function removeOverlay(id) {
+  overlayConfigs = overlayConfigs.filter(o=>o.id!==id);
+  renderOverlayList(); persistSave();
+}
+function pushOverlays() {
+  const target = document.getElementById('ovPushTarget').value;
+  const cmd = { type:'set-overlays', overlays:overlayConfigs };
+  if (target==='all') broadcastCmd(cmd);
+  else sendToScreen(target, cmd);
+}
+function clearOverlays() {
+  if (!confirm('Clear all overlays from all screens?')) return;
+  broadcastCmd({ type:'set-overlays', overlays:[] });
+}
+
+// ══════════════════════════════════════
+//  SCHEDULE IMPORT / EXPORT
+// ══════════════════════════════════════
+function exportSchedule() {
+  if (!schedules.length) { alert('No schedules to export'); return; }
+  const json = JSON.stringify({ version:2, schedules, exportedAt:new Date().toISOString() }, null, 2);
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([json],{type:'application/json'})),
+    download: `fse-cast-schedule-${new Date().toISOString().slice(0,10)}.json`
+  });
+  a.click();
+}
+function importSchedule(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const imported = data.schedules || data;
+      if (!Array.isArray(imported)) { alert('Invalid schedule file'); return; }
+      const merge = confirm(`Import ${imported.length} slots? OK=merge, Cancel=replace all`);
+      if (merge) {
+        imported.forEach(s=>{ if(!schedules.find(x=>x.id===s.id)) schedules.push(s); });
+      } else {
+        schedules = imported;
+      }
+      renderSchedules(); renderTimeline(); renderUpcoming(); persistSave();
+      alert(`Imported ${imported.length} schedule slots.`);
+    } catch(err) { alert('Failed to parse file: '+err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+// ══════════════════════════════════════
+//  PLAYLIST EDITOR PATCHES (v1.2)
+// ══════════════════════════════════════
+function patchPlaylistEditor() {
+  // Add transition + fade duration to playlist settings card
+  const plSettings = document.getElementById('plEditNotes')?.closest('.card-body');
+  if (!plSettings) return;
+  const txFields = document.createElement('div');
+  txFields.innerHTML = `
+    <hr style="border:none;border-top:1px solid var(--border);margin:12px 0;">
+    <div style="font-family:var(--display);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Playback (v1.2)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div class="form-group"><label class="form-label">Transition</label>
+        <select class="form-input" id="plEditTransition" onchange="updatePlaylistSettings()">
+          <option value="cut">Cut</option>
+          <option value="fade">Fade</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Fade Duration (sec)</label>
+        <input type="number" class="form-input" id="plEditFadeDur" value="0.5" min="0.1" max="5" step="0.1" oninput="updatePlaylistSettings()">
+      </div>
+    </div>`;
+  plSettings.appendChild(txFields);
+
+  // Patch selectEditPlaylist to load transition fields
+  const origSelect = window.selectEditPlaylist;
+  window.selectEditPlaylist = function(id) {
+    origSelect(id);
+    const pl = playlists.find(p=>p.id===id);
+    if (pl) {
+      const txSel = document.getElementById('plEditTransition');
+      const fdur  = document.getElementById('plEditFadeDur');
+      if (txSel) txSel.value = pl.transition||'cut';
+      if (fdur)  fdur.value  = pl.fadeDuration||0.5;
+    }
+  };
+
+  // Patch updatePlaylistSettings to save transition
+  const origUpdate = window.updatePlaylistSettings;
+  window.updatePlaylistSettings = function() {
+    origUpdate();
+    const pl=playlists.find(p=>p.id===editingPlaylistId);if(!pl)return;
+    const txSel=document.getElementById('plEditTransition');
+    const fdur=document.getElementById('plEditFadeDur');
+    if(txSel) pl.transition=txSel.value;
+    if(fdur)  pl.fadeDuration=parseFloat(fdur.value)||0.5;
+    persistSave();
+  };
+
+  // Patch renderEditQueue to show audio level per item
+  const origRenderQ = window.renderEditQueue;
+  window.renderEditQueue = function() {
+    origRenderQ();
+    const pl=playlists.find(p=>p.id===editingPlaylistId);
+    if (!pl||!pl.items.length) return;
+    // Add audio level inputs to each item row
+    const items = document.querySelectorAll('#editQueueList .list-item');
+    items.forEach((li,i)=>{
+      const item=pl.items[i];if(!item||item.type!=='video') return;
+      const existing=li.querySelector('.audio-ctrl');if(existing) return;
+      const ctrl=document.createElement('div');
+      ctrl.className='audio-ctrl';
+      ctrl.style.cssText='display:flex;align-items:center;gap:4px;flex-shrink:0;';
+      ctrl.innerHTML=`<span style="font-size:9px;color:var(--muted);">🔊</span>
+        <input type="range" min="0" max="1" step="0.05" value="${item.audioLevel!=null?item.audioLevel:1}"
+          style="width:60px;accent-color:var(--accent);"
+          oninput="setItemAudio('${item.id}',parseFloat(this.value))"
+          title="Audio level: ${item.audioLevel!=null?item.audioLevel:1}">`;
+      li.insertBefore(ctrl, li.querySelector('.item-meta'));
+    });
+  };
+}
+
+function setItemAudio(itemId, level) {
+  playlists.forEach(pl=>{
+    const item=pl.items.find(it=>it.id===itemId);
+    if(item) { item.audioLevel=level; }
+  });
+  persistSave();
+}
+
+// ══════════════════════════════════════
+//  LOOPBACK TEST FROM CONTROL
+// ══════════════════════════════════════
+function sendLoopbackTest(playerId, filename) {
+  sendToScreen(playerId, { type:'loopback-test', filename });
+}
+
+// ══════════════════════════════════════
+//  ENHANCED SCREEN CARD (v1.4)
+// ══════════════════════════════════════
+// Patch renderScreens to add loopback button + overlay count + collect logs
+const origRenderScreens = window.renderScreens;
+if (origRenderScreens) {
+  window.renderScreens = function() {
+    origRenderScreens();
+    // Add extra controls to each screen card
+    Object.values(players).forEach(p=>{
+      const card=document.getElementById('sc-'+p.id);
+      if (!card) return;
+      const ctrl=card.querySelector('.sc-controls');
+      if (!ctrl||ctrl.dataset.patched) return;
+      ctrl.dataset.patched='1';
+      // Loopback test
+      const lbBtn=document.createElement('button');
+      lbBtn.className='btn btn-secondary btn-sm';
+      lbBtn.textContent='🔁 Test';
+      lbBtn.title='Run loopback test on current clip';
+      lbBtn.disabled=!p.connected;
+      lbBtn.onclick=()=>sendToScreen(p.id,{type:'loopback-test'});
+      ctrl.appendChild(lbBtn);
+      // Collect logs
+      const logBtn=document.createElement('button');
+      logBtn.className='btn btn-secondary btn-sm';
+      logBtn.textContent='📋 Logs';
+      logBtn.title='Request log folder path from screen';
+      logBtn.disabled=!p.connected;
+      logBtn.onclick=()=>sendToScreen(p.id,{type:'collect-logs'});
+      ctrl.appendChild(logBtn);
+      // Overlay count badge
+      if (p.overlayCount>0) {
+        const ovBadge=document.createElement('span');
+        ovBadge.className='tag';
+        ovBadge.style.marginLeft='auto';
+        ovBadge.textContent=`${p.overlayCount} overlay${p.overlayCount>1?'s':''}`;
+        card.querySelector('.sc-body').appendChild(ovBadge);
+      }
+    });
+  };
+}
+
+// (onPlayerHB handled in main IPC block above — no duplicate needed here)
+
+// ══════════════════════════════════════
+//  PERSISTENCE PATCH — save overlays
+// ══════════════════════════════════════
+const origPersistSave = window.persistSave;
+window.persistSave = async function() {
+  if (origPersistSave) await origPersistSave();
+  if (window.api) {
+    const existing = await window.api.loadStorage()||{};
+    existing.overlayConfigs = overlayConfigs.map(o=>({...o, srcData:null}));
+    await window.api.saveStorage(existing);
+  }
+};
+const origPersistLoad = window.persistLoad;
+window.persistLoad = async function() {
+  if (origPersistLoad) await origPersistLoad();
+  if (window.api) {
+    const data = await window.api.loadStorage();
+    if (data?.overlayConfigs) {
+      overlayConfigs = data.overlayConfigs;
+      renderOverlayList();
+    }
+  }
+};
+</script>

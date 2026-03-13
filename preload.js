@@ -1,0 +1,23 @@
+const { contextBridge, ipcRenderer } = require('electron');
+contextBridge.exposeInMainWorld('api', {
+  loadStorage:      ()              => ipcRenderer.invoke('storage-load'),
+  saveStorage:      (data)          => ipcRenderer.invoke('storage-save', data),
+  getPlayers:       ()              => ipcRenderer.invoke('get-players'),
+  startServer:      (port)          => ipcRenderer.invoke('start-server', port),
+  stopServer:       ()              => ipcRenderer.invoke('stop-server'),
+  sendToPlayer:     (id, payload)   => ipcRenderer.send('send-to-player', { id, payload }),
+  broadcast:        (payload)       => ipcRenderer.send('broadcast', payload),
+  exportLogCSV:     (csv)           => ipcRenderer.invoke('export-log-csv', csv),
+  openDataFolder:   ()              => ipcRenderer.invoke('open-data-folder'),
+  onServerStatus:   (cb) => ipcRenderer.on('server-status',       (e,d) => cb(d)),
+  onPlayerUpdate:   (cb) => ipcRenderer.on('player-update',       (e,d) => cb(d)),
+  onPlayerConnected:(cb) => ipcRenderer.on('player-connected',    (e,d) => cb(d)),
+  onPlayerDisconn:  (cb) => ipcRenderer.on('player-disconnected', (e,d) => cb(d)),
+  onPlayerHB:       (cb) => ipcRenderer.on('player-heartbeat',    (e,d) => cb(d)),
+  onPlayerFiles:    (cb) => ipcRenderer.on('player-files',        (e,d) => cb(d)),
+  onPlayerError:    (cb) => ipcRenderer.on('player-error',        (e,d) => cb(d)),
+  onPopEntry:       (cb) => ipcRenderer.on('pop-entry',           (e,d) => cb(d)),
+  onPlayerLoopback: (cb) => ipcRenderer.on('player-loopback',     (e,d) => cb(d)),
+  onPlayerLogColl:  (cb) => ipcRenderer.on('player-log-collection',(e,d) => cb(d)),
+  onPlayersPruned:  (cb) => ipcRenderer.on('players-pruned',      (e,d) => cb(d)),
+});
