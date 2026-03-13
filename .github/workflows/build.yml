@@ -1,0 +1,29 @@
+name: Build FSE-Cast Control
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build installer
+        run: npx electron-builder --win nsis --publish never
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: FSE-Cast-Control-Windows
+          path: dist/*.exe
+          retention-days: 30
